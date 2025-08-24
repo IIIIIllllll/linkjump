@@ -1,49 +1,67 @@
-function getQueryParams() {
-  const params = {};
-  const queryString = window.location.search.substring(1);
-  const pairs = queryString.split("&");
-  for (const pair of pairs) {
-    const [key, value] = pair.split("=");
-    if (key && value) params[decodeURIComponent(key)] = decodeURIComponent(value);
-  }
-  return params;
-}
-
-async function main() {
-  const msg = document.getElementById("message");
-  const params = getQueryParams();
-  const key = params["key"];
-  const file = params["file"];
-
-  if (!key || !file) {
-    msg.innerText = "缺少必要参数 ?key=xxx&file=yyy / Missing required parameters ?key=xxx&file=yyy";
-    return;
+(function () {
+  function setMsg(text) {
+    const el = document.getElementById("message");
+    if (el) el.textContent = text;
   }
 
-  try {
-    const response = await fetch("data.json");
-    const data = await response.json();
+  function getParams() {
+    const sp = new URLSearchParams(window.location.search);
+    // 支持别名，方便你以后改：key/k，file/id
+    return {
+      key: sp.get("key") || sp.get("k"),
+      file: sp.get("file") || sp.get("id"),
+    };
+  }
 
-    const ciphertext = data[file];
-    if (!ciphertext) {
-      msg.innerText = "未找到对应文件 / File not found";
+  async function main() {
+    const { key, file } = getParams();
+
+    if (!key || !file) {
+      setMsg("缺少必要参数 ?key=xxx&file=yyy / Missing parameters ?key=xxx&file=yyy");
       return;
     }
 
-    const bytes = CryptoJS.AES.decrypt(ciphertext, key);
-    const original = bytes.toString(CryptoJS.enc.Utf8);
+    try {
+      // 加时间戳避免 GitHub Pages 缓存老文件
+      const res = await fetch("data.json?ts=" + Date.now());
+      if (!res.ok) {
+        setMsg("无法读取数据文件 / Failed to fetch data.json");
+        return;
+      }
 
-    if (!original) {
-      msg.innerText = "密钥错误，无法解锁 / Wrong key, failed to unlock";
-      return;
+      const db = await res.json();
+      const ciphertext = db[file];
+
+      if (!ciphertext) {
+        setMsg("未找到对应文件 / File not found");
+        return;
+      }
+
+      let original = "";
+      try {
+        const bytes = CryptoJS.AES.decrypt(ciphertext, key);
+        original = bytes.toString(CryptoJS.enc.Utf8);
+      } catch (_) {
+        // 解密出错会落到下面的校验
+      }
+
+      if (!original) {
+        setMsg("密钥错误或解密失败 / Wrong key or decryption failed");
+        return;
+      }
+
+      setMsg("解锁成功，正在跳转… / Unlocked successfully, redirecting…");
+      // 直接跳转到解密得到的真实链接（可为 https:// 或 ankiistore:// 等）
+      window.location.href = original;
+    } catch (err) {
+      console.error(err);
+      setMsg("发生错误 / An error occurred");
     }
-
-    msg.innerText = "解锁成功，正在跳转… / Unlocked successfully, redirecting…";
-    window.location.href = original;
-  } catch (e) {
-    msg.innerText = "读取或解密失败 / Failed to read or decrypt";
-    console.error(e);
   }
-}
 
-main();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", main);
+  } else {
+    main();
+  }
+})();
