@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>跳转中 / Redirecting...</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-  <script src="decrypt.js"></script>
+  <meta charset="UTF-8" />
+  <title>跳转中 / Redirecting…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
-  <p id="message">正在处理，请稍候... / Processing, please wait...</p>
+  <p id="message">正在处理，请稍候… / Processing, please wait…</p>
+  <noscript>此页面需要启用 JavaScript / JavaScript is required.</noscript>
+
+  <!-- 一定先加载 CryptoJS，再加载你的脚本；用 defer 确保 DOM 就绪后执行 -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script defer src="decrypt.js"></script>
 </body>
 </html>
